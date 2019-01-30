@@ -10,6 +10,8 @@ Desktop music player focused on streaming from free sources
 
 [Twitter](https://twitter.com/nuclear_player)
 
+Support channel (Matrix): `#nuclear:matrix.org`
+
 ## What is this?
 nuclear is a free music streaming program that pulls content from free sources all over the internet.
 
@@ -58,6 +60,7 @@ We do not control these and cannot be held responsible for their contents, but i
 | Package type   |                        Link                            | Maintainer                    |
 |:--------------:|:------------------------------------------------------:|:-----------------------------:|
 | AUR (Arch)     | https://aur.archlinux.org/packages/nuclear-player-bin/ | [mikelpint](https://github.com/mikelpint)  |
+| Choco (Win)     | https://chocolatey.org/packages/nuclear/ | [JourneyOver](https://github.com/JourneyOver)  |
 
 ## Screenshots
 This will be updated as the program evolves.
@@ -79,13 +82,12 @@ This will be updated as the program evolves.
 ![genre view](https://i.imgur.com/KrzUvwp.png)
 
 ## Dev build process
-To develop the project locally, you should only do:
+Make sure you're using the latest version of Node and NPM. To develop the project locally, you should only do:
 ```bash
 $ npm install
 $ npm run watch
 ```
-This launches webpack. It watches local files for changes and rebuilds the project as needed. The project also has hot reload built in.
-And in another terminal window:
+This launches webpack. It watches local files for changes and rebuilds the project as needed. The project also has hot reload built in. And in another terminal window:
 ```bash
 $ npm run electron:dev
 ```

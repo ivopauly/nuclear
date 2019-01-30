@@ -1,4 +1,4 @@
-require("babel-polyfill");
+require('babel-polyfill');
 const { app, ipcMain, nativeImage, BrowserWindow, Menu, Tray } = require('electron');
 const platform = require('electron-platform');
 const path = require('path');
@@ -10,7 +10,7 @@ let tray;
 let icon = nativeImage.createFromPath(path.resolve(__dirname, 'resources', 'media', 'icon.png'));
 
 function changeWindowTitle(artist, title) {
-  win.setTitle(`${artist} - ${title} - nuclear music player`);
+  win.setTitle(`${artist} - ${title} - Nuclear Music Player`);
 }
 
 function createWindow() {
@@ -23,10 +23,13 @@ function createWindow() {
     webPreferences: {
       experimentalFeatures: true,
       webSecurity: false
-    }
+    },
+    additionalArguments: [
+      getOption('disableGPU') && '--disable-gpu'
+    ]
   });
 
-  win.setTitle('nuclear music player');
+  win.setTitle('Nuclear Music Player');
 
   win.loadURL(url.format({
     pathname: path.join(__dirname, 'index.html'),
@@ -35,7 +38,7 @@ function createWindow() {
   }));
 
   win.once('ready-to-show', () => {
-    win.show()
+    win.show();
   });
 
   win.on('closed', () => {
@@ -57,8 +60,8 @@ function createWindow() {
   ]);
 
   tray = new Tray(icon);
-  tray.setTitle('nuclear music player');
-  tray.setToolTip('nuclear music player');
+  tray.setTitle('Nuclear Music Player');
+  tray.setToolTip('Nuclear Music Player');
   tray.setContextMenu(trayMenu);
 
   ipcMain.on('close', () => {

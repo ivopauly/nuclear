@@ -89,7 +89,6 @@
   flex: 0 0 auto;
   flex-flow: column;
 
-  height: 80px;
   width: 100%;
   max-width: 100%;
 
@@ -113,6 +112,7 @@
   display: flex;
   flex: 1 1 auto;
   flex-flow: row;
+  overflow: hidden;
 }
 
 .version_string {

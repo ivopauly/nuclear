@@ -1,7 +1,7 @@
 const {
   default: installExtension,
   REACT_DEVELOPER_TOOLS,
-  REDUX_DEVTOOLS,
+  REDUX_DEVTOOLS
 } = require('electron-devtools-installer');
 const {
   app,
@@ -9,7 +9,7 @@ const {
   nativeImage,
   BrowserWindow,
   Menu,
-  Tray,
+  Tray
 } = require('electron');
 const platform = require('electron-platform');
 const path = require('path');
@@ -23,7 +23,7 @@ let icon = nativeImage.createFromPath(
 );
 
 function changeWindowTitle (artist, title) {
-  win.setTitle(`${artist} - ${title} - nuclear music player`);
+  win.setTitle(`${artist} - ${title} - Nuclear Music Player`);
 }
 
 function createWindow () {
@@ -35,11 +35,14 @@ function createWindow () {
     show: false,
     webPreferences: {
       experimentalFeatures: true,
-      webSecurity: false,
+      webSecurity: false
     },
+    additionalArguments: [
+      getOption('disableGPU') && '--disable-gpu'
+    ]
   });
 
-  win.setTitle('nuclear music player');
+  win.setTitle('Nuclear Music Player');
 
   // Needs to be commented for now
   // https://github.com/electron/electron/issues/13008
@@ -55,7 +58,7 @@ function createWindow () {
     url.format({
       pathname: 'localhost:8080',
       protocol: 'http:',
-      slashes: true,
+      slashes: true
     })
   );
 
@@ -83,13 +86,13 @@ function createWindow () {
       type: 'normal',
       click: (menuItem, browserWindow, event) => {
         app.quit();
-      },
-    },
+      }
+    }
   ]);
 
   tray = new Tray(icon);
-  tray.setTitle('nuclear music player');
-  tray.setToolTip('nuclear music player');
+  tray.setTitle('Nuclear Music Player');
+  tray.setToolTip('Nuclear Music Player');
   tray.setContextMenu(trayMenu);
 
   ipcMain.on('close', () => {
@@ -102,7 +105,7 @@ function createWindow () {
 
   ipcMain.on('maximize', () => {
     if (platform.isDarwin) {
-      win.isFullScreen() ? win.setFullScreen(false) : win.setFullScreen(true)
+      win.isFullScreen() ? win.setFullScreen(false) : win.setFullScreen(true);
     } else {
       win.isMaximized() ? win.unmaximize() : win.maximize();
     }

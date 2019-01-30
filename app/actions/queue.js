@@ -19,10 +19,7 @@ function addTrackToQueue (musicSources, item) {
       type: ADD_TO_QUEUE,
       payload: item
     });
-
-    Promise.all(
-      _.map(musicSources, m => m.search(item.artist + ' ' + item.name))
-    )
+    Promise.all(_.map(musicSources, m => m.search({ artist: item.artist, track: item.name })))
       .then(results => Promise.all(results))
       .then(results => {
         dispatch({
@@ -34,7 +31,7 @@ function addTrackToQueue (musicSources, item) {
 }
 
 export function addToQueue (musicSources, item) {
-  return addTrackToQueue(musicSources, item)
+  return addTrackToQueue(musicSources, item);
 }
 
 export function removeFromQueue (item) {
@@ -45,25 +42,24 @@ export function removeFromQueue (item) {
 }
 
 export function addPlaylistTracksToQueue (musicSources, tracks) {
-  return (dispatch) => {
+  return dispatch => {
     tracks.map((item, i) => {
-      return addTrackToQueue(musicSources, item)
-    })
+      dispatch(addTrackToQueue(musicSources, item));
+    });
   };
 }
 
 export function rerollTrack (musicSource, selectedStream, track) {
   return dispatch => {
-    musicSource.getAlternateStream(track.artist + ' ' + track.name, selectedStream)
-      .then(newStream => {
-        let streams = _.map(track.streams, stream => {
-          return stream.source === newStream.source ? newStream : stream;
-        });
-        dispatch({
-          type: REPLACE_STREAMS_IN_QUEUE_ITEM,
-          payload: Object.assign({}, track, { streams })
-        });
+    musicSource.getAlternateStream({ artist: track.artist, track: track.name }, selectedStream).then(newStream => {
+      let streams = _.map(track.streams, stream => {
+        return stream.source === newStream.source ? newStream : stream;
       });
+      dispatch({
+        type: REPLACE_STREAMS_IN_QUEUE_ITEM,
+        payload: Object.assign({}, track, { streams })
+      });
+    });
   };
 }
 
