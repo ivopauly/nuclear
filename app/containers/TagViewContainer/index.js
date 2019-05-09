@@ -14,7 +14,7 @@ class TagViewContainer extends React.Component {
     super(props);
   }
 
-  render() {
+  render () {
     let {
       actions,
       match,
@@ -27,29 +27,27 @@ class TagViewContainer extends React.Component {
       <TagView
         loadTagInfo={actions.loadTagInfo}
         artistInfoSearchByName={actions.artistInfoSearchByName}
+        albumInfoSearchByName={actions.albumInfoSearchByName}
         history={history}
         tag={match.params.tagName}
         tags={tags}
         musicSources={musicSources}
         addToQueue={actions.addToQueue}
-        startPlayback={actions.startPlayback}
-        clearQueue={actions.clearQueue}
-        selectSong={actions.selectSong}
       />
     );
   }
 }
 
-function mapStateToProps(state) {
+function mapStateToProps (state) {
   return {
     tags: state.tags,
     musicSources: state.plugin.plugins.musicSources
   };
 }
 
-function mapDispatchToProps(dispatch) {
+function mapDispatchToProps (dispatch) {
   return {
-    actions: bindActionCreators(Object.assign({}, Actions, TagActions, QueueActions), dispatch)
+    actions: bindActionCreators(Object.assign({}, Actions, TagActions, QueueActions, PlayerActions), dispatch)
   };
 }
 

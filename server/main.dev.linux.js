@@ -1,12 +1,17 @@
+import 'babel-polyfill';
 import logger from 'electron-timber';
-// const { default: installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } = require('electron-devtools-installer');
-const { app, ipcMain, nativeImage, BrowserWindow, Menu, Tray } = require('electron');
-const platform = require('electron-platform');
-const path = require('path');
-const url = require('url');
-const mpris = require('./mpris');
+import platform from 'electron-platform';
+import path from 'path';
+import url from 'url';
+import { app, ipcMain, nativeImage, BrowserWindow, Menu, Tray } from 'electron';
+
+import { runHttpServer, closeHttpServer } from './http/server';
+import { setOption } from './store';
+import { registerDownloadsEvents } from './downloads';
+
+const { default: installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } = require('electron-devtools-installer');
 const getOption = require('./store').getOption;
-// var Player;
+
 
 // GNU/Linux-specific
 if (!platform.isDarwin && !platform.isWin32) {
@@ -14,7 +19,7 @@ if (!platform.isDarwin && !platform.isWin32) {
 }
 
 let win;
-let player;
+let httpServer;
 let tray;
 let icon = nativeImage.createFromPath(path.resolve(__dirname, 'resources', 'media', 'icon.png'));
 
@@ -41,15 +46,13 @@ function createWindow() {
 
   win.setTitle('nuclear music player');
 
-  // Needs to be commented for now
-  // https://github.com/electron/electron/issues/13008
-  // installExtension(REACT_DEVELOPER_TOOLS)
-  // .then((name) => console.log(`Added Extension:  ${name}`))
-  // .catch((err) => console.log('An error occurred: ', err));
+  installExtension(REACT_DEVELOPER_TOOLS)
+    .then((name) => console.log(`Added Extension:  ${name}`))
+    .catch((err) => console.log('An error occurred: ', err));
 
-  // installExtension(REDUX_DEVTOOLS)
-  // .then((name) => console.log(`Added Extension:  ${name}`))
-  // .catch((err) => console.log('An error occurred: ', err));
+  installExtension(REDUX_DEVTOOLS)
+    .then((name) => console.log(`Added Extension:  ${name}`))
+    .catch((err) => console.log('An error occurred: ', err));
 
   win.loadURL(url.format({
     pathname: 'localhost:8080',
@@ -76,8 +79,8 @@ function createWindow() {
 
   const trayMenu = Menu.buildFromTemplate([
     {label: 'Quit', type: 'normal', click:
-     (menuItem, browserWindow, event) => {
-       app.quit();
+     () => {
+       closeHttpServer(httpServer).then(() => app.quit());
      }
     }
   ]);
@@ -86,6 +89,8 @@ function createWindow() {
   tray.setTitle('nuclear music player');
   tray.setToolTip('nuclear music player');
   tray.setContextMenu(trayMenu);
+
+  registerDownloadsEvents(win);
 
   ipcMain.on('close', () => {
     logger.log('Received a close message from ipc, quitting');
@@ -98,6 +103,16 @@ function createWindow() {
 
   ipcMain.on('maximize', () => {
     win.isMaximized() ? win.unmaximize() : win.maximize();
+  });
+
+  ipcMain.on('restart-api', () => {
+    closeHttpServer(httpServer).then(() => {
+      httpServer = runHttpServer({ log: true, port: getOption('api.port') });
+    });
+  });
+
+  ipcMain.on('stop-api', () => {
+    closeHttpServer(httpServer);
   });
 
   // GNU/Linux-specific
@@ -158,9 +173,16 @@ function createWindow() {
   }
 }
 
-app.on('ready', createWindow);
+app.on('ready', () => {
+  createWindow();
+
+  if (getOption('api.enabled')) {
+    setOption('api.port', 3000);
+    httpServer = runHttpServer({ log: true, port: 3000 });
+  }
+});
 
 app.on('window-all-closed', () => {
   logger.log('All windows closed, quitting');
-  app.quit();
+  closeHttpServer(httpServer).then(() => app.quit());
 });

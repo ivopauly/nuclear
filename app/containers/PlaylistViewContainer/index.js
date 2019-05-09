@@ -5,36 +5,37 @@ import { bindActionCreators } from 'redux';
 
 import * as QueueActions from '../../actions/queue';
 import * as PlayerActions from '../../actions/player';
+import * as ToastActions from '../../actions/toasts';
+import * as PlaylistActions from '../../actions/playlists';
+
 import PlaylistView from '../../components/PlaylistView';
 
-class PlaylistViewContainer extends React.Component {
-  constructor(props) {
-    super(props);
-  }
+const PlaylistViewContainer = props => {
+  return (
+    <PlaylistView
+      playlist={props.playlists.playlists[props.match.params.playlistId]}
+      musicSources={props.musicSources}
+      addTracks={props.actions.addPlaylistTracksToQueue}
+      selectSong={props.actions.selectSong}
+      startPlayback={props.actions.startPlayback}
+      addToQueue={props.actions.addToQueue}
+      deletePlaylist={props.actions.deletePlaylist}
+      updatePlaylist={props.actions.updatePlaylist}
+      history={props.history}
+    />
+  );
+};
 
-  render() {
-    return (
-      <PlaylistView
-        playlist={this.props.playlists.playlists[this.props.match.params.playlistId]}
-        musicSources={this.props.musicSources}
-        addTracks={this.props.actions.addPlaylistTracksToQueue}
-        selectSong={this.props.actions.selectSong}
-        startPlayback={this.props.actions.startPlayback}
-      />
-    );
-  }
-}
-
-function mapStateToProps(state) {
+function mapStateToProps (state) {
   return {
     playlists: state.playlists,
     musicSources: state.plugin.plugins.musicSources
   };
 }
 
-function mapDispatchToProps(dispatch) {
+function mapDispatchToProps (dispatch) {
   return {
-    actions: bindActionCreators(Object.assign({}, QueueActions, PlayerActions), dispatch)
+    actions: bindActionCreators(Object.assign({}, QueueActions, PlayerActions, ToastActions, PlaylistActions), dispatch)
   };
 }
 

@@ -1,15 +1,14 @@
 import logger from 'electron-timber';
 import { ipcMain } from 'electron';
 
-var rendererWindow = null;
+let rendererWindow = null;
 
-var events = ['raise', 'quit', 'next', 'previous', 'pause', 'playpause', 'stop', 'play', 'seek', 'position', 'open', 'volume'];
+// const events = ['raise', 'quit', 'next', 'previous', 'pause', 'playpause', 'stop', 'play', 'seek', 'position', 'open', 'volume', 'settings'];
 
-ipcMain.on('started', (event, arg) => {
+ipcMain.once('started', event => {
   logger.log('Renderer process started and registered.');
   rendererWindow = event.sender;
 });
-
 
 function onNext() {
   rendererWindow.send('next');
@@ -35,11 +34,76 @@ function onPlay() {
   rendererWindow.send('play');
 }
 
+function onVolume(volume) {
+  rendererWindow.send('volume', volume);
+}
+
+function onSeek(position) {
+  rendererWindow.send('seek', position);
+}
+ 
+function onSettings(settings) {
+  rendererWindow.send('settings', settings);
+}
+
+function onMute() {
+  rendererWindow.send('mute');
+}
+
+function onEmptyQueue() {
+  rendererWindow.send('empty-queue');
+}
+
+function onCreatePlaylist(name) {
+  rendererWindow.send('create-playlist', name);
+}
+
+function onRemovePlaylist() {
+  rendererWindow.send('refresh-playlists');
+}
+
+function onUpdateEqualizer(data) {
+  rendererWindow.send('update-equalizer', data);
+}
+
+function onSetEqualizer(equalizer) {
+  rendererWindow.send('set-equalizer', equalizer);
+}
+
+function getQueue() {
+  return new Promise(resolve => {
+    rendererWindow.send('queue');
+    ipcMain.on('queue', (evt, data) => {
+      resolve(data);
+    });
+  });
+}
+
+function getPlayingStatus() {
+  return new Promise(resolve => {
+    rendererWindow.send('playing-status');
+    ipcMain.on('playing-status', (evt, data) => {
+      resolve(data);
+    });
+  });
+}
+
 module.exports = {
   onNext,
   onPrevious,
   onPause,
   onPlayPause,
   onStop,
-  onPlay
-}
+  onPlay,
+  onSettings,
+  onVolume,
+  onSeek,
+  onMute,
+  onEmptyQueue,
+  getQueue,
+  onCreatePlaylist,
+  onRemovePlaylist,
+  getPlayingStatus,
+  onUpdateEqualizer,
+  onSetEqualizer
+};

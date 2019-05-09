@@ -1,13 +1,15 @@
 import React from 'react';
 import FontAwesome from 'react-fontawesome';
-import Sound from 'react-sound';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { NavLink, Link, withRouter } from 'react-router-dom';
+import { NavLink, withRouter } from 'react-router-dom';
 import classnames from 'classnames';
 import _ from 'lodash';
+import Sound from 'react-hifi';
+
 import * as Actions from './actions';
 import * as PlayerActions from './actions/player';
+import * as PlaylistsActions from './actions/playlists';
 import * as PluginsActions from './actions/plugins';
 import * as QueueActions from './actions/queue';
 import * as SettingsActions from './actions/settings';
@@ -24,7 +26,9 @@ import artPlaceholder from '../resources/media/art_placeholder.png';
 import { config as PluginConfig } from './plugins/config';
 import settingsConst from './constants/settings';
 
+import PlaylistsSubMenu from './components/PlaylistsSubMenu';
 import Footer from './components/Footer';
+import HelpModal from './components/HelpModal';
 import Navbar from './components/Navbar';
 import VerticalPanel from './components/VerticalPanel';
 import Spacer from './components/Spacer';
@@ -35,17 +39,30 @@ import SearchBoxContainer from './containers/SearchBoxContainer';
 
 import IpcContainer from './containers/IpcContainer';
 import SoundContainer from './containers/SoundContainer';
+import ToastContainer from './containers/ToastContainer';
+import ShortcutsContainer from './containers/ShortcutsContainer';
+import ErrorBoundary from './containers/ErrorBoundary';
 
 import ui from 'nuclear-ui';
+import NavButtons from './components/NavButtons';
 import PlayerControls from './components/PlayerControls';
 import Seekbar from './components/Seekbar';
 import SidebarMenu from './components/SidebarMenu';
 import SidebarMenuItem from './components/SidebarMenu/SidebarMenuItem';
+import SidebarMenuCategoryHeader from './components/SidebarMenu/SidebarMenuCategoryHeader';
 import TrackInfo from './components/TrackInfo';
 import WindowControls from './components/WindowControls';
 import VolumeControls from './components/VolumeControls';
 
 class App extends React.Component {
+  constructor(props) {
+    super(props);
+  }
+
+  componentDidMount() {
+    this.props.actions.loadPlaylists();
+  }
+  
   togglePlayback () {
     if (
       this.props.player.playbackStatus === Sound.status.PAUSED &&
@@ -84,9 +101,19 @@ class App extends React.Component {
   renderNavBar () {
     return (
       <Navbar className={styles.navbar}>
+        <NavButtons
+          back={this.props.history.goBack}
+          forward={this.props.history.goForward}
+          historyLength={this.props.history.length}
+          historyCurrentIndex={this.props.history.index}
+        />
         <SearchBoxContainer />
-        <Spacer />
-        <Spacer />
+        <Spacer style={{
+          height: '100%',
+          flex: '1 1 45%',
+          WebkitAppRegion: 'drag'
+        }}/>
+        <HelpModal />
         {this.props.settings.framelessWindow && <WindowControls />}
       </Navbar>
     );
@@ -103,6 +130,7 @@ class App extends React.Component {
       </VerticalPanel>
     );
   }
+  
   renderSidebarMenu (settings, toggleOption) {
     return (
       <VerticalPanel
@@ -117,16 +145,37 @@ class App extends React.Component {
               src={settings.compactMenuBar ? logoIcon : logoImg}
             />
             <div className={styles.version_string}>
-              {settings.compactMenuBar ? '0.4.4' : 'Version 0.4.4'}
+              {settings.compactMenuBar ? '0.4.5' : 'Version 0.4.5'}
             </div>
           </div>
+          <SidebarMenuCategoryHeader compact={ settings.compactMenuBar }>
+            Main
+          </SidebarMenuCategoryHeader>
           {this.renderNavLink('dashboard', 'dashboard', 'Dashboard', settings)}
           {this.renderNavLink('downloads', 'download', 'Downloads', settings)}
-          {this.renderNavLink('playlists', 'music', 'Playlists', settings)}
+          {this.renderNavLink('lyrics', 'microphone', 'Lyrics', settings)}
           {this.renderNavLink('plugins', 'flask', 'Plugins', settings)}
-          {this.renderNavLink('settings', 'cogs', 'Settings', settings)}
           {this.renderNavLink('search', 'search', 'Search Results', settings)}
+          {this.renderNavLink('settings', 'cogs', 'Settings', settings)}
+          {this.renderNavLink('equalizer', 'sliders', 'Equalizer', settings)}
 
+          <SidebarMenuCategoryHeader compact={ settings.compactMenuBar }>
+            Collection
+          </SidebarMenuCategoryHeader>
+          {this.renderNavLink('favorites/tracks', 'star', 'Favorite tracks', settings)}
+          {this.renderNavLink('library', 'file-sound-o', 'Library', settings)}
+
+          {
+            !_.isEmpty(this.props.playlists) &&
+            <SidebarMenuCategoryHeader compact={ settings.compactMenuBar }>
+            Playlists
+            </SidebarMenuCategoryHeader>
+          }
+          <PlaylistsSubMenu
+            playlists={this.props.playlists}
+            compact={ settings.compactMenuBar }
+          />
+          
           <Spacer />
           {this.renderSidebarFooter(settings, toggleOption)}
         </SidebarMenu>
@@ -208,17 +257,24 @@ class App extends React.Component {
       <TrackInfo
         track={this.getCurrentSongParameter('name')}
         artist={this.getCurrentSongParameter('artist')}
+        artistInfoSearchByName={this.props.actions.artistInfoSearchByName}
+        history={this.props.history}
       />
     );
   }
   renderPlayerControls () {
+    const { player, queue } = this.props;
+    const couldPlay = queue.queueItems.length > 0;
+    const couldForward = queue.currentSong + 1 < queue.queueItems.length;
+    const couldBack = queue.currentSong > 0;
+
     return (
       <PlayerControls
-        togglePlay={this.togglePlayback.bind(this)}
-        playing={this.props.player.playbackStatus === Sound.status.PLAYING}
-        loading={this.props.player.playbackStreamLoading}
-        forward={this.nextSong.bind(this)}
-        back={this.props.actions.previousSong}
+        togglePlay={couldPlay ? this.togglePlayback.bind(this) : undefined}
+        playing={player.playbackStatus === Sound.status.PLAYING}
+        loading={player.playbackStreamLoading}
+        forward={couldForward ? this.nextSong.bind(this) : undefined}
+        back={couldBack ? this.props.actions.previousSong : undefined}
       />
     );
   }
@@ -228,20 +284,11 @@ class App extends React.Component {
       <VolumeControls
         fill={this.props.player.volume}
         updateVolume={this.props.actions.updateVolume}
+        muted={this.props.player.muted}
+        toggleMute={this.props.actions.toggleMute}
         toggleOption={this.props.actions.toggleOption}
         settings={settings}
       />
-    );
-  }
-
-  renderNavbar () {
-    return (
-      <Navbar className={styles.navbar}>
-        <SearchBoxContainer />
-        <Spacer />
-        <Spacer />
-        <WindowControls />
-      </Navbar>
     );
   }
 
@@ -255,19 +302,25 @@ class App extends React.Component {
     let { settings } = this.props;
     let { toggleOption } = this.props.actions;
     return (
-      <div className={styles.app_container}>
-        {this.renderNavBar()}
-        <div className={styles.panel_container}>
-          {this.renderSidebarMenu(settings, toggleOption)}
-          <VerticalPanel className={styles.center_panel}>
-            <MainContentContainer />
-          </VerticalPanel>
-          {this.renderRightPanel(settings)}
-        </div>
-        {this.renderFooter(settings)}
-        <SoundContainer />
-        <IpcContainer />
-      </div>
+      <React.Fragment>
+        <ErrorBoundary>
+          <div className={styles.app_container}>
+            {this.renderNavBar()}
+            <div className={styles.panel_container}>
+              {this.renderSidebarMenu(settings, toggleOption)}
+              <VerticalPanel className={styles.center_panel}>
+                <MainContentContainer />
+              </VerticalPanel>
+              {this.renderRightPanel(settings)}
+            </div>
+            {this.renderFooter(settings)}
+            <SoundContainer />
+            <IpcContainer />
+          </div>
+        </ErrorBoundary>
+        <ShortcutsContainer/>
+        <ToastContainer/>
+      </React.Fragment>
     );
   }
 }
@@ -276,6 +329,7 @@ function mapStateToProps (state) {
   return {
     queue: state.queue,
     player: state.player,
+    playlists: state.playlists.playlists,
     scrobbling: state.scrobbling,
     settings: state.settings
   };
@@ -290,6 +344,7 @@ function mapDispatchToProps (dispatch) {
         SettingsActions,
         QueueActions,
         PlayerActions,
+        PlaylistsActions,
         PluginsActions,
         Actions
       ),

@@ -1,50 +1,79 @@
 import React from 'react';
-import {Dimmer, Loader, Tab} from 'semantic-ui-react';
+import { Tab } from 'semantic-ui-react';
+import _ from 'lodash';
 
-import BestNewList from './BestNewList';
+import BestNewMusicMenu from './BestNewMusicMenu';
+import BestNewMusicContent from './BestNewMusicContent';
 import styles from './styles.scss';
 
 class BestNewMusicTab extends React.Component {
   constructor(props) {
     super(props);
+
+    this.state = {
+      activeItem: null
+    };
   }
 
-  isLoading() {
+  componentWillReceiveProps(nextProps) {
+    if (this.state.activeItem === null) {
+      const firstAlbum = _.head(
+        _.get(nextProps, 'dashboardData.bestNewAlbums')
+      );
+      
+      if (firstAlbum) {
+        this.setState({
+          activeItem: firstAlbum
+        });
+      }
+    }
+  }
+
+  isLoading () {
     return this.props.dashboardData.bestNewAlbums.length < 1 || this.props.dashboardData.bestNewTracks.length < 1;
   }
 
-  render() {
+  setActiveItem(activeItem) {
+    this.setState({ activeItem });
+  }
+
+  render () {
     let {
       dashboardData,
       artistInfoSearchByName,
+      albumInfoSearchByName,
+      addToQueue,
+      selectSong,
+      clearQueue,
+      startPlayback,
+      musicSources,
       history
     } = this.props;
+    
     return (
-      <Tab.Pane loading={this.isLoading()} attached={false} className={styles.best_new_music_tab_pane}>
-        <div className={styles.best_new_music_tab_container}>
-          <h2>
-            Best new albums
-          </h2>
-          <div className={styles.best_new_music_section_container}>
-            <BestNewList
-              data={dashboardData.bestNewAlbums}
-              artistInfoSearchByName={artistInfoSearchByName}
-              history={history}
-            />
-          </div>
-          <h2>
-            Best new tracks
-          </h2>
-          <div className={styles.best_new_music_section_container}>
-            <BestNewList
-              data={dashboardData.bestNewTracks}
-              artistInfoSearchByName={artistInfoSearchByName}
-              history={history}
-            />
-          </div>
-        </div>
+      <Tab.Pane
+        loading={this.isLoading()}
+        attached={false}
+        className={styles.best_new_music_tab_pane}
+      >
+        <BestNewMusicMenu
+          albums={ dashboardData.bestNewAlbums }
+          tracks={ dashboardData.bestNewTracks }
+          setActiveItem={ this.setActiveItem.bind(this) }
+        />
+        <BestNewMusicContent
+          item={ this.state.activeItem }
+          artistInfoSearchByName={artistInfoSearchByName}
+          albumInfoSearchByName={albumInfoSearchByName}
+          addToQueue={addToQueue}
+          selectSong={selectSong}
+          clearQueue={clearQueue}
+          startPlayback={startPlayback}
+          musicSources={musicSources}
+          history={history}
+        />
       </Tab.Pane>
-    );
+    );      
   }
 }
 

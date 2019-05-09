@@ -4,7 +4,7 @@
 
 Desktop music player focused on streaming from free sources
 
-[Official website](http://nuclear.gumblert.tech)
+[Official website](https://nuclear.js.org)
 
 [Mastodon](https://mstdn.io/@nuclear)
 
@@ -37,6 +37,9 @@ On an unrelated note, highly polarized opinions about languages and frameworks a
 - Scrobbling to last.fm (along with updating the 'now playing' status)
 - Newest releases with reviews - tracks and albums
 - Browsing by genre
+- Radio mode (automatically queue similar tracks)
+- Unlimited downloads
+- Realtime lyrics
 
 ## Planned features
 
@@ -44,12 +47,10 @@ On an unrelated note, highly polarized opinions about languages and frameworks a
 - Browsing by popularity
 - Country-specific top lists
 - Listening suggestions (similar artists, albums, tracks)
-- Unlimited downloads
-- Realtime lyrics
 - Locally stored library/favourites
 
 ## Manual and docs
-http://nuclearmusic.rtfd.io/
+https://nuclearmusic.rtfd.io/
 
 ## Community-maintained packages
 
@@ -69,15 +70,15 @@ This will be updated as the program evolves.
 
 ![laptop mockup 2](https://i.imgur.com/HqMP5HF.jpg)
 
-![album search](http://i.imgur.com/tLSv6pw.png)
+![album search](https://i.imgur.com/tLSv6pw.png)
 
-![album display](http://i.imgur.com/hAEXUaQ.png)
+![album display](https://i.imgur.com/hAEXUaQ.png)
 
-![artist view](http://i.imgur.com/DCrlVqt.png)
+![artist view](https://i.imgur.com/DCrlVqt.png)
 
 ![dashboard](https://i.imgur.com/tewcTEu.png)
 
-![playlist view](http://i.imgur.com/YM3eP3i.png)
+![playlist view](https://i.imgur.com/YM3eP3i.png)
 
 ![genre view](https://i.imgur.com/KrzUvwp.png)
 

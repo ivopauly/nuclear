@@ -1,4 +1,5 @@
 import React from 'react';
+import _ from 'lodash';
 import { Dimmer, Loader } from 'semantic-ui-react';
 import AlbumList from '../AlbumList';
 import ArtistTags from './ArtistTags';
@@ -14,7 +15,7 @@ class ArtistView extends React.Component {
     this.isLoading = this.isLoading.bind(this);
   }
 
-  isLoading() {
+  isLoading () {
     return (
       _.get(this.props, 'artist.loading') ||
       _.isEmpty(_.get(this.props, 'artist.lastfm')) ||
@@ -22,7 +23,11 @@ class ArtistView extends React.Component {
     );
   }
 
-  renderArtistHeader(artist, history) {
+  isOnTour() {
+    return _.get(this.props, 'artist.lastfm.artist.ontour') === '1';
+  }
+
+  renderArtistHeader (artist, history) {
     return (
       <div className={styles.artist_header_overlay}>
         <div className={styles.artist_header_container}>
@@ -39,9 +44,19 @@ class ArtistView extends React.Component {
           />
 
           <div className={styles.artist_name_container}>
-            <h1>{artist.name}</h1>
+            <div className={styles.artist_name_line}>
+              <h1>{artist.name}</h1>
+              {
+                this.isOnTour() &&
+                  <span
+                    className={styles.on_tour}
+                  >
+                      On tour
+                  </span>
+              }
+            </div>
 
-            {artist.lastfm.artist !== undefined && (
+            {typeof artist.lastfm.artist !== 'undefined' && (
               <ArtistTags
                 tags={artist.lastfm.artist.tags.tag}
                 history={history}
@@ -53,15 +68,13 @@ class ArtistView extends React.Component {
     );
   }
 
-  renderPopularTrack() {
+  renderPopularTrack () {
     let {
       artist,
       addToQueue,
-      selectSong,
-      startPlayback,
-      clearQueue,
       musicSources
     } = this.props;
+    
     return (
       !this.isLoading() &&
       artist.lastfm.toptracks && (
@@ -69,21 +82,18 @@ class ArtistView extends React.Component {
           tracks={artist.lastfm.toptracks}
           artist={artist}
           addToQueue={addToQueue}
-          selectSong={selectSong}
-          startPlayback={startPlayback}
-          clearQueue={clearQueue}
           musicSources={musicSources}
         />
       )
     );
   }
 
-  renderSimilarArtists() {
+  renderSimilarArtists () {
     let { artist, history, artistInfoSearchByName } = this.props;
 
     return (
       !this.isLoading() &&
-      artist.lastfm.artist !== undefined && (
+      typeof artist.lastfm.artist !== 'undefined' && (
         <SimilarArtists
           artists={artist.lastfm.artist.similar.artist}
           artistInfoSearchByName={artistInfoSearchByName}
@@ -93,7 +103,7 @@ class ArtistView extends React.Component {
     );
   }
 
-  renderHeaderBanner() {
+  renderHeaderBanner () {
     let { artist, history } = this.props;
 
     return (
@@ -113,7 +123,7 @@ class ArtistView extends React.Component {
     );
   }
 
-  render() {
+  render () {
     let { artist, history, albumInfoSearch } = this.props;
     return (
       <div className={styles.artist_view_container}>
@@ -134,7 +144,9 @@ class ArtistView extends React.Component {
           </div>
           <hr />
           <AlbumList
-            albums={_.get(artist, 'releases')}
+            albums={_.get(artist, 'releases', []).sort((a, b) => {
+              return b.year - a.year;
+            })}
             albumInfoSearch={albumInfoSearch}
             history={history}
           />

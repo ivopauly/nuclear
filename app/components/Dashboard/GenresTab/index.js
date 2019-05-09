@@ -1,19 +1,24 @@
 import React from 'react';
-import {Tab} from 'semantic-ui-react';
+import { Tab } from 'semantic-ui-react';
 import Img from 'react-image-smooth-loading';
 
+import genreToIcon from './mapGenres';
 import styles from './styles.scss';
+
+const bannedGenres = [
+  'seen live'
+];
 
 class GenresTab extends React.Component {
   constructor(props) {
     super(props);
   }
 
-  onGenreClick(genreName) {
+  onGenreClick (genreName) {
     this.props.history.push('/tag/' + genreName);
   }
 
-  render() {
+  render () {
     let {
       genres
     } = this.props;
@@ -22,8 +27,8 @@ class GenresTab extends React.Component {
       <Tab.Pane attached={false}>
         <div className={styles.genre_tab_container}>
           {
-            genres !== undefined
-              ? genres.map((tag, i) => {
+            typeof genres !== 'undefined'
+              ? _.filter(genres, genre => !_.includes(bannedGenres, genre.name)).map((tag, i) => {
                 return (
                   <div
                     className={styles.genre_container}
@@ -32,10 +37,14 @@ class GenresTab extends React.Component {
                   >
 
                     <div className={styles.genre_overlay}>
-                      <Img src={'https://picsum.photos/256x256/?random&seed=' + i} />
+                      <Img src={'https://picsum.photos/256?random=' + i} />
                     </div>
                     <div className={styles.genre_name}>
-                      {tag.name}
+                      <div
+                        className={styles.svg_icon}
+                        dangerouslySetInnerHTML={{ __html: genreToIcon(tag.name) }}
+                      />
+                      { tag.name }
                     </div>
                   </div>
                 );

@@ -3,9 +3,7 @@ import core from 'nuclear-core';
 import _ from 'lodash';
 import globals from '../globals';
 
-const mb = require('../rest/Musicbrainz');
 const discogs = require('../rest/Discogs');
-const lastfmRest = require('../rest/LastFm');
 const youtube = require('../rest/Youtube');
 
 let lastfm = new core.LastFmApi(globals.lastfmApiKey, globals.lastfmApiSecret);
@@ -70,7 +68,7 @@ export function unifiedSearchError () {
 
 function discogsSearch (terms, searchType, dispatchType) {
   return dispatch => {
-    return searchType(terms)
+    return discogs.search(terms, searchType)
       .then(searchResults => searchResults.json())
       .then(searchResultsJson => {
         dispatch({
@@ -86,11 +84,11 @@ function discogsSearch (terms, searchType, dispatchType) {
 }
 
 export function albumSearch (terms) {
-  return discogsSearch(terms, discogs.searchReleases, 'ALBUM_SEARCH_SUCCESS');
+  return discogsSearch(terms, 'master', 'ALBUM_SEARCH_SUCCESS');
 }
 
 export function artistSearch (terms) {
-  return discogsSearch(terms, discogs.searchArtists, 'ARTIST_SEARCH_SUCCESS');
+  return discogsSearch(terms, 'artist', 'ARTIST_SEARCH_SUCCESS');
 }
 
 export function lastFmTrackSearchStart (terms) {
@@ -113,11 +111,11 @@ export function lastFmTrackSearchSuccess (terms, searchResults) {
 export function lastFmTrackSearch (terms) {
   return dispatch => {
     dispatch(lastFmTrackSearchStart(terms));
-    Promise.all([lastfmRest.searchTracks(terms)])
+    Promise.all([lastfm.searchTracks(terms)])
       .then(results => Promise.all(results.map(info => info.json())))
       .then(results => {
         dispatch(
-          lastFmTrackSearchSuccess(terms, results[0].results.trackmatches.track)
+          lastFmTrackSearchSuccess(terms, _.get(results[0], 'results.trackmatches.track', []))
         );
       })
       .catch(error => {
@@ -146,7 +144,7 @@ export function youtubePlaylistSearchSuccess (terms, results) {
 export function youtubePlaylistSearch (terms) {
   return dispatch => {
     dispatch(youtubePlaylistSearchStart(terms));
-    youtube.playlistSearch(terms)
+    youtube.urlSearch(terms)
       .then(results => {
         dispatch(
           youtubePlaylistSearchSuccess(terms, results)
@@ -287,7 +285,7 @@ export function artistReleasesSearch (artistId) {
 export function artistInfoSearchByName (artistName, history) {
   return dispatch => {
     discogs
-      .searchArtists(artistName)
+      .search(artistName, 'artists')
       .then(searchResults => searchResults.json())
       .then(searchResultsJson => {
         let artist = searchResultsJson.results[0];
@@ -296,6 +294,32 @@ export function artistInfoSearchByName (artistName, history) {
         }
 
         dispatch(artistInfoSearch(artist.id));
+      })
+      .catch(error => {
+        logger.error(error);
+      });
+  };
+}
+
+export function albumInfoSearchByName (albumName, history) {
+  return dispatch => {
+    discogs
+      .search(albumName, 'albums')
+      .then(searchResults => searchResults.json())
+      .then(searchResultsJson => {
+        let album = searchResultsJson.results[0];
+        if (album.type == 'artist') {
+          dispatch(lastFmArtistInfoSearch(album.title, album.id));
+          if (history) {
+            history.push('/artist/' + album.id);
+          }
+        } else {
+          dispatch(albumInfoSearch(album.id, album.type));
+          if (history) {
+            history.push('/album/' + album.id);
+          }
+        }
+
       })
       .catch(error => {
         logger.error(error);
@@ -341,5 +365,3 @@ export function lastFmArtistInfoSearch (artist, artistId) {
       });
   };
 }
-
-

@@ -1,49 +1,66 @@
 import React from 'react';
-import { Route, Switch, Link, withRouter } from 'react-router-dom';
-import { RouteTransition } from 'react-router-transition';
+import { withRouter } from 'react-router-dom';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import _ from 'lodash';
+import Sound, { Volume, Equalizer, AnalyserByFrequency } from 'react-hifi';
 
 import * as Actions from '../../actions';
 import * as PlayerActions from '../../actions/player';
+import * as EqualizerActions from '../../actions/equalizer';
 import * as QueueActions from '../../actions/queue';
 import * as ScrobblingActions from '../../actions/scrobbling';
-import Sound from 'react-sound';
+import * as LyricsActions from '../../actions/lyrics';
+import { filterFrequencies } from '../../components/Equalizer';
 import { getSelectedStream } from '../../utils';
+import * as Autoradio from './autoradio';
 import globals from '../../globals';
 import core from 'nuclear-core';
-import { consolidateStreamedStyles } from 'styled-components';
 
 let lastfm = new core.LastFmApi(globals.lastfmApiKey, globals.lastfmApiSecret);
 
 class SoundContainer extends React.Component {
-  handlePlaying(update) {
+  constructor(props) {
+    super(props);
+  }
+
+  handlePlaying (update) {
     let seek = update.position;
     let progress = (update.position / update.duration) * 100;
     this.props.actions.updatePlaybackProgress(progress, seek);
     this.props.actions.updateStreamLoading(false);
   }
 
-  handleLoading() {
+  handleLoading () {
     this.props.actions.updateStreamLoading(true);
   }
 
-  handleLoaded() {
+  handleLoaded () {
+    this.handleLoadLyrics();
     this.handleAutoRadio();
     this.props.actions.updateStreamLoading(false);
   }
 
-  handleAutoRadio() {
+  handleLoadLyrics () {
+    let currentSong = this.props.queue.queueItems[
+      this.props.queue.currentSong
+    ];
+
+    if (typeof currentSong.lyrics === 'undefined') {
+      this.props.actions.lyricsSearch(currentSong);
+    }
+  }
+  
+  handleAutoRadio () {
     if (
       this.props.settings.autoradio &&
       this.props.queue.currentSong === this.props.queue.queueItems.length - 1
     ) {
-      this.addAutoradioTrackToQueue();
+      Autoradio.addAutoradioTrackToQueue(this.props);
     }
   }
 
-  nextSong() {
+  nextSong () {
     if (this.props.settings.shuffleQueue) {
       let index = _.random(0, this.props.queue.queueItems.length - 1);
       this.props.actions.selectSong(index);
@@ -52,7 +69,7 @@ class SoundContainer extends React.Component {
     }
   }
 
-  handleFinishedPlaying() {
+  handleFinishedPlaying () {
     if (
       this.props.scrobbling.lastFmScrobblingEnabled &&
       this.props.scrobbling.lastFmSessionKey
@@ -76,7 +93,7 @@ class SoundContainer extends React.Component {
     }
   }
 
-  addAutoradioTrackToQueue() {
+  addAutoradioTrackToQueue () {
     let currentSong = this.props.queue.queueItems[this.props.queue.currentSong];
     return lastfm
       .getArtistInfo(currentSong.artist)
@@ -90,27 +107,27 @@ class SoundContainer extends React.Component {
       });
   }
 
-  getSimilarArtists(artistJson) {
-    return new Promise((resolve, reject) => {
+  getSimilarArtists (artistJson) {
+    return new Promise((resolve) => {
       resolve(artistJson.similar.artist);
     });
   }
 
-  getRandomElement(arr) {
+  getRandomElement (arr) {
     let devianceParameter = 0.2; // We will select one of the 20% most similar artists
     let randomElement =
       arr[Math.round(Math.random() * (devianceParameter * (arr.length - 1)))];
-    return new Promise((resolve, reject) => resolve(randomElement));
+    return new Promise((resolve) => resolve(randomElement));
   }
 
-  getArtistTopTracks(artist) {
+  getArtistTopTracks (artist) {
     return lastfm
       .getArtistTopTracks(artist.name)
       .then(topTracks => topTracks.json());
   }
 
-  addToQueue(artist, track) {
-    return new Promise((resolve, reject) => {
+  addToQueue (artist, track) {
+    return new Promise((resolve) => {
       let musicSources = this.props.plugins.plugins.musicSources;
       this.props.actions.addToQueue(musicSources, {
         artist: artist.name,
@@ -121,27 +138,30 @@ class SoundContainer extends React.Component {
     });
   }
 
-  shouldComponentUpdate(nextProps) {
+  shouldComponentUpdate (nextProps) {
+    const currentSong = nextProps.queue.queueItems[nextProps.queue.currentSong];
+
     return (
       this.props.queue.currentSong !== nextProps.queue.currentSong ||
       this.props.player.playbackStatus !== nextProps.player.playbackStatus ||
-      this.props.player.seek !== nextProps.player.seek
+      this.props.player.seek !== nextProps.player.seek ||
+      (!!currentSong && !!currentSong.streams && currentSong.streams.length > 0)
     );
   }
 
-  render() {
-    let { player, queue, plugins } = this.props;
-
+  render () {
+    let { player, queue, plugins, equalizer, actions, viz } = this.props;
     let streamUrl = '';
 
     if (queue.queueItems.length > 0) {
-      let currentSong = queue.queueItems[queue.currentSong];
+      const currentSong = queue.queueItems[queue.currentSong];
+      
       streamUrl = (
         getSelectedStream(currentSong.streams, plugins.defaultMusicSource) || {}
       ).stream;
     }
 
-    return (
+    return !!streamUrl && (
       <Sound
         url={streamUrl}
         playStatus={player.playbackStatus}
@@ -150,23 +170,37 @@ class SoundContainer extends React.Component {
         onLoading={this.handleLoading.bind(this)}
         onLoad={this.handleLoaded.bind(this)}
         position={player.seek}
-        volume={player.volume}
-      />
+      >
+        <Volume value={player.muted ? 0 : player.volume} />
+        <Equalizer
+          data={filterFrequencies.reduce((acc, freq, idx) => ({
+            ...acc,
+            [freq]: equalizer.values[idx] || 0
+          }), {})}
+          preAmp={equalizer.preAmp}
+        />
+        <AnalyserByFrequency
+          frequencies={filterFrequencies}
+          onVisualisationData={viz && actions.setVisualizationData}
+        />
+      </Sound>
     );
   }
 }
 
-function mapStateToProps(state) {
+function mapStateToProps (state) {
   return {
     queue: state.queue,
     plugins: state.plugin,
     player: state.player,
     scrobbling: state.scrobbling,
-    settings: state.settings
+    settings: state.settings,
+    equalizer: state.equalizer.presets[state.equalizer.selected],
+    viz: state.equalizer.viz
   };
 }
 
-function mapDispatchToProps(dispatch) {
+function mapDispatchToProps (dispatch) {
   return {
     actions: bindActionCreators(
       Object.assign(
@@ -174,8 +208,9 @@ function mapDispatchToProps(dispatch) {
         Actions,
         PlayerActions,
         QueueActions,
-        ScrobblingActions
-        // AutoradioActions
+        ScrobblingActions,
+        LyricsActions,
+        EqualizerActions
       ),
       dispatch
     )

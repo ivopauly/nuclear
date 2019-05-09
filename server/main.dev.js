@@ -14,8 +14,11 @@ const {
 const platform = require('electron-platform');
 const path = require('path');
 const url = require('url');
-const getOption = require('./store').getOption;
+const { getOption, setOption } = require('./store');
+const { runHttpServer, closeHttpServer } = require('./http/server');
+import { registerDownloadsEvents } from './downloads';
 
+let httpServer;
 let win;
 let tray;
 let icon = nativeImage.createFromPath(
@@ -44,15 +47,13 @@ function createWindow () {
 
   win.setTitle('Nuclear Music Player');
 
-  // Needs to be commented for now
-  // https://github.com/electron/electron/issues/13008
-  // installExtension(REACT_DEVELOPER_TOOLS)
-  // .then((name) => console.log(`Added Extension:  ${name}`))
-  // .catch((err) => console.log('An error occurred: ', err));
+  installExtension(REACT_DEVELOPER_TOOLS)
+    .then((name) => console.log(`Added Extension:  ${name}`))
+    .catch((err) => console.log('An error occurred: ', err));
 
-  // installExtension(REDUX_DEVTOOLS)
-  // .then((name) => console.log(`Added Extension:  ${name}`))
-  // .catch((err) => console.log('An error occurred: ', err));
+  installExtension(REDUX_DEVTOOLS)
+    .then((name) => console.log(`Added Extension:  ${name}`))
+    .catch((err) => console.log('An error occurred: ', err));
 
   win.loadURL(
     url.format({
@@ -84,7 +85,7 @@ function createWindow () {
     {
       label: 'Quit',
       type: 'normal',
-      click: (menuItem, browserWindow, event) => {
+      click: () => {
         app.quit();
       }
     }
@@ -95,8 +96,10 @@ function createWindow () {
   tray.setToolTip('Nuclear Music Player');
   tray.setContextMenu(trayMenu);
 
+  registerDownloadsEvents(win);
+
   ipcMain.on('close', () => {
-    app.quit();
+    closeHttpServer(httpServer).then(() => app.quit());
   });
 
   ipcMain.on('minimize', () => {
@@ -117,10 +120,27 @@ function createWindow () {
     }
     changeWindowTitle(arg.artist, arg.name);
   });
+
+  ipcMain.on('restart-api', () => {
+    closeHttpServer(httpServer).then(() => {
+      httpServer = runHttpServer({ log: true, port: getOption('api.port') });
+    });
+  });
+
+  ipcMain.on('stop-api', () => {
+    closeHttpServer(httpServer);
+  });
 }
 
-app.on('ready', createWindow);
+app.on('ready', () => {
+  createWindow();
+
+  if (getOption('api.enabled')) {
+    setOption('api.port', 3000);
+    httpServer = runHttpServer({ log: true, port: 3000 });
+  }
+});
 
 app.on('window-all-closed', () => {
-  app.quit();
+  closeHttpServer(httpServer).then(() => app.quit());
 });
